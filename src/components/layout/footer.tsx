@@ -1,46 +1,32 @@
 import Link from "next/link";
 
+const footerLinks = [
+  { href: "/inventory", label: "Inventory" },
+  { href: "/pick-list", label: "Pick List" },
+  { href: "/dispatch", label: "Dispatch" },
+  { href: "/movements", label: "Stock Movements" },
+  { href: "/admin", label: "Admin" },
+];
+
 export function Footer() {
   return (
     <footer className="mt-auto border-t border-zinc-200 bg-zinc-50">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Warehouse Control Panel</h3>
-            <p className="mt-3 text-sm text-zinc-600">
-              Inventory management, pick lists, and dispatch operations for modern warehouse teams.
-            </p>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Operations</h3>
-            <ul className="mt-3 space-y-2 text-sm text-zinc-600">
-              <li><Link href="/inventory" className="hover:text-zinc-900">Inventory</Link></li>
-              <li><Link href="/inventory?filter=low-stock" className="hover:text-zinc-900">Low Stock Alerts</Link></li>
-              <li><Link href="/pick-list" className="hover:text-zinc-900">Pick List</Link></li>
-              <li><Link href="/dispatch" className="hover:text-zinc-900">Dispatch</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Staff</h3>
-            <ul className="mt-3 space-y-2 text-sm text-zinc-600">
-              <li><Link href="/auth/sign-in" className="hover:text-zinc-900">Sign In</Link></li>
-              <li><Link href="/auth/sign-up" className="hover:text-zinc-900">Register</Link></li>
-              <li><Link href="/movements" className="hover:text-zinc-900">Stock Movements</Link></li>
-              <li><Link href="/admin" className="hover:text-zinc-900">Admin Panel</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-zinc-900">Support</h3>
-            <ul className="mt-3 space-y-2 text-sm text-zinc-600">
-              <li><span>Contact: ops@warehouse.local</span></li>
-              <li><span>24/7 dispatch monitoring</span></li>
-              <li><span>Multi-zone inventory tracking</span></li>
-            </ul>
-          </div>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+          <Link href="/" className="text-sm font-bold tracking-tight text-zinc-900">
+            Warehouse<span className="text-amber-600">CP</span>
+          </Link>
+          <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-zinc-600">
+            {footerLinks.map((link) => (
+              <Link key={link.href} href={link.href} className="hover:text-zinc-900">
+                {link.label}
+              </Link>
+            ))}
+          </nav>
         </div>
-        <div className="mt-10 border-t border-zinc-200 pt-6 text-center text-sm text-zinc-500">
-          &copy; {new Date().getFullYear()} Warehouse Control Panel. All rights reserved.
-        </div>
+        <p className="mt-6 text-center text-sm text-zinc-500">
+          &copy; {new Date().getFullYear()} WarehouseCP. All rights reserved.
+        </p>
       </div>
     </footer>
   );
