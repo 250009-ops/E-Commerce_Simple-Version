@@ -192,7 +192,6 @@ export async function clearUserCart(): Promise<void> {
 }
 
 export async function isUserLoggedIn(): Promise<boolean> {
-  if (!isDatabaseConfigured()) return false;
   const user = await getSession();
   return Boolean(user);
 }

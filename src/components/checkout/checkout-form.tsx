@@ -8,9 +8,10 @@ import { createOrder } from "@/app/actions/orders";
 import { formatPrice } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { extractSku } from "@/lib/data/demo-data";
 import type { CartLineItem, ShippingAddress } from "@/types/database";
 
-function CheckoutSummary({
+function DispatchSummary({
   items,
   submitting,
   error,
@@ -23,17 +24,15 @@ function CheckoutSummary({
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
-  const shipping = subtotal >= 100 ? 0 : 9.99;
-  const total = subtotal + shipping;
 
   return (
     <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 h-fit">
-      <h2 className="text-lg font-semibold text-zinc-900">Order Summary</h2>
+      <h2 className="text-lg font-semibold text-zinc-900">Dispatch summary</h2>
       <ul className="mt-4 space-y-3">
         {items.map((item) => (
           <li key={item.product.id} className="flex justify-between text-sm">
             <span className="text-zinc-600">
-              {item.product.name} × {item.quantity}
+              {extractSku(item.product.name)} × {item.quantity}
             </span>
             <span className="font-medium">
               {formatPrice(item.product.price * item.quantity)}
@@ -42,24 +41,16 @@ function CheckoutSummary({
         ))}
       </ul>
       <dl className="mt-4 space-y-2 border-t border-zinc-200 pt-4 text-sm">
-        <div className="flex justify-between">
-          <dt className="text-zinc-600">Subtotal</dt>
-          <dd>{formatPrice(subtotal)}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-zinc-600">Shipping</dt>
-          <dd>{shipping === 0 ? "Free" : formatPrice(shipping)}</dd>
-        </div>
         <div className="flex justify-between text-base font-semibold">
-          <dt>Total</dt>
-          <dd>{formatPrice(total)}</dd>
+          <dt>Total value</dt>
+          <dd>{formatPrice(subtotal)}</dd>
         </div>
       </dl>
       {error && (
         <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
       )}
       <Button type="submit" size="lg" className="mt-6 w-full" disabled={submitting}>
-        {submitting ? "Placing Order..." : "Place Order"}
+        {submitting ? "Recording dispatch..." : "Confirm dispatch"}
       </Button>
     </div>
   );
@@ -110,9 +101,9 @@ export function CheckoutForm({
   if (cartItems.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-lg text-zinc-600">Your cart is empty</p>
-        <Button className="mt-4" onClick={() => router.push("/products")}>
-          Continue Shopping
+        <p className="text-lg text-zinc-600">Your pick list is empty</p>
+        <Button className="mt-4" onClick={() => router.push("/inventory")}>
+          Browse inventory
         </Button>
       </div>
     );
@@ -143,7 +134,7 @@ export function CheckoutForm({
 
     if (result.success) {
       clearGuestCart();
-      router.push(`/orders?success=${result.orderId}`);
+      router.push(`/movements?success=${result.orderId}`);
     } else {
       setError(result.error ?? "Something went wrong");
       setSubmitting(false);
@@ -154,14 +145,14 @@ export function CheckoutForm({
     <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-2">
       <div className="space-y-6">
         <div>
-          <h2 className="text-lg font-semibold text-zinc-900">Shipping Address</h2>
+          <h2 className="text-lg font-semibold text-zinc-900">Destination details</h2>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Full Name</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-700">Recipient / Facility</label>
               <Input name="fullName" required />
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-zinc-700">Email</label>
+              <label className="mb-1 block text-sm font-medium text-zinc-700">Contact email</label>
               <Input name="email" type="email" required defaultValue={userEmail} />
             </div>
             <div className="sm:col-span-2">
@@ -187,8 +178,7 @@ export function CheckoutForm({
           </div>
         </div>
       </div>
-      <CheckoutSummary items={cartItems} submitting={submitting} error={error} />
+      <DispatchSummary items={cartItems} submitting={submitting} error={error} />
     </form>
   );
 }
-

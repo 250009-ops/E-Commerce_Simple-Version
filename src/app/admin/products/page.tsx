@@ -4,7 +4,7 @@ import { getProducts } from "@/lib/data/products";
 import { AdminProductList } from "@/components/admin/admin-product-list";
 
 export const metadata = {
-  title: "Manage Products — Admin",
+  title: "Manage Inventory — Warehouse Admin",
 };
 
 export default async function AdminProductsPage() {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ShoppingBag, Search, User, Menu, X, Package } from "lucide-react";
+import { ClipboardList, Search, User, Menu, X, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getSessionUser, signOut } from "@/app/actions/auth";
 import { useCart } from "@/context/cart-context";
@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 import type { SessionUser } from "@/types/database";
 
 const navLinks = [
-  { href: "/products", label: "Shop" },
-  { href: "/products?category=electronics", label: "Electronics" },
-  { href: "/products?category=clothing", label: "Clothing" },
-  { href: "/products?category=home-living", label: "Home" },
+  { href: "/inventory", label: "Inventory" },
+  { href: "/inventory?category=zone-a-electronics", label: "Zone A" },
+  { href: "/inventory?category=zone-b-apparel", label: "Zone B" },
+  { href: "/inventory?category=zone-c-home", label: "Zone C" },
 ];
 
 export function Navbar() {
@@ -32,7 +32,7 @@ export function Navbar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      router.push(`/inventory?search=${encodeURIComponent(searchQuery.trim())}`);
       setSearchOpen(false);
       setSearchQuery("");
     }
@@ -50,7 +50,7 @@ export function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
           <Link href="/" className="text-xl font-bold tracking-tight text-zinc-900">
-            Storefront
+            Warehouse<span className="text-amber-600">CP</span>
           </Link>
           <nav className="hidden items-center gap-6 md:flex">
             {navLinks.map((link) => (
@@ -72,19 +72,19 @@ export function Navbar() {
           <button
             onClick={() => setSearchOpen(!searchOpen)}
             className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-100"
-            aria-label="Search"
+            aria-label="Search inventory"
           >
             <Search className="h-5 w-5" />
           </button>
 
           <Link
-            href="/cart"
+            href="/pick-list"
             className="relative rounded-lg p-2 text-zinc-600 hover:bg-zinc-100"
-            aria-label="Cart"
+            aria-label="Pick list"
           >
-            <ShoppingBag className="h-5 w-5" />
+            <ClipboardList className="h-5 w-5" />
             {count > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-[10px] font-bold text-white">
+              <span className="absolute -right-0.5 -top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-zinc-900">
                 {count > 99 ? "99+" : count}
               </span>
             )}
@@ -93,11 +93,11 @@ export function Navbar() {
           {user ? (
             <div className="hidden items-center gap-2 sm:flex">
               <Link
-                href="/orders"
+                href="/movements"
                 className="rounded-lg p-2 text-zinc-600 hover:bg-zinc-100"
-                aria-label="Orders"
+                aria-label="Stock movements"
               >
-                <Package className="h-5 w-5" />
+                <Truck className="h-5 w-5" />
               </Link>
               {user.isAdmin && (
                 <Link
@@ -139,7 +139,7 @@ export function Navbar() {
           <form onSubmit={handleSearch} className="mx-auto flex max-w-xl gap-2">
             <input
               type="search"
-              placeholder="Search products..."
+              placeholder="Search inventory by SKU or name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:border-zinc-900 focus:outline-none"
@@ -170,8 +170,8 @@ export function Navbar() {
             ))}
             {user ? (
               <>
-                <Link href="/orders" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-zinc-700">
-                  My Orders
+                <Link href="/movements" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-zinc-700">
+                  Stock Movements
                 </Link>
                 {user.isAdmin && (
                   <Link href="/admin" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-zinc-700">

@@ -1,6 +1,6 @@
-# Storefront — E-Commerce Platform
+# Warehouse Control Panel
 
-A modern, full-stack e-commerce platform built with Next.js, TypeScript, Tailwind CSS, and Vercel Postgres. Deploy everything to Vercel with a single stack — no external backend required.
+A warehouse inventory and dispatch management app built with Next.js, TypeScript, Tailwind CSS, and Vercel Postgres. Monitor stock levels, manage pick lists, and track shipments — deploy everything to Vercel with a single stack.
 
 ## Tech Stack
 
@@ -15,14 +15,14 @@ A modern, full-stack e-commerce platform built with Next.js, TypeScript, Tailwin
 
 ## Features
 
-- **Home page** — Hero section, category grid, featured products
-- **Product catalog** — Browse, search, and filter by category
-- **Product detail** — Images, pricing, stock, add to cart
-- **Shopping cart** — Guest (localStorage) and logged-in (Postgres) persistence
-- **Checkout** — Shipping form, order creation, stock updates
-- **Authentication** — Custom email/password auth with JWT session cookies
-- **Order history** — View past orders
-- **Admin panel** — Product management (requires admin account)
+- **Warehouse dashboard** — SKU counts, low stock alerts, pending shipments, recent movements
+- **Inventory catalog** — Browse, search, and filter by zone/category with SKU and stock status
+- **Item detail** — Stock levels, location, reserve to pick list
+- **Pick list** — Guest (localStorage) and logged-in (Postgres) persistence
+- **Dispatch** — Record outgoing stock and create shipment movements
+- **Staff authentication** — Custom email/password auth with JWT session cookies
+- **Stock movements** — View inbound/outbound history
+- **Admin panel** — Inventory management (requires admin account)
 
 ## Default Admin Login
 
@@ -35,9 +35,16 @@ Password: Admin123!
 
 The init script creates this admin user automatically when you run `npm run db:init`.
 
-## Demo Mode
+## Demo Mode (No Postgres Required)
 
-The app works without `POSTGRES_URL` configured — it falls back to built-in demo product data and localStorage for the cart. Auth, checkout, and admin require the database.
+The app works without `POSTGRES_URL` configured:
+
+- Sign in with admin credentials (`admin@store.com` / `Admin123!`) — JWT sessions use a dev `AUTH_SECRET` fallback
+- Browse demo warehouse inventory and dashboard stats
+- Use pick list via localStorage (guest mode)
+- Admin panel shows read-only demo data
+
+Auth, dispatch, and persistent pick lists require Postgres for production use.
 
 ## Local Development
 
@@ -47,63 +54,45 @@ The app works without `POSTGRES_URL` configured — it falls back to built-in de
 npm install
 ```
 
-### 2. Set up Vercel Postgres
+### 2. Run in demo mode (no database)
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) and sign in at `/auth/sign-in` with `admin@store.com` / `Admin123!`.
+
+### 3. Optional — connect Postgres
 
 **Option A — Vercel CLI / Dashboard**
 
 1. Create a project at [vercel.com](https://vercel.com)
-2. Add **Postgres** storage from the Storage tab (or Vercel Marketplace → Neon)
+2. Add **Postgres** storage from the Storage tab
 3. Copy the `POSTGRES_URL` connection string
 
 **Option B — Local Postgres**
 
 Use any local Postgres instance and set `POSTGRES_URL` accordingly.
 
-### 3. Configure environment
-
 ```bash
 cp .env.example .env.local
 ```
 
-Fill in:
-
 | Variable | Description |
 |---|---|
 | `POSTGRES_URL` | Postgres connection string |
-| `AUTH_SECRET` | Random secret for JWT sessions (32+ chars) |
+| `AUTH_SECRET` | Random secret for JWT sessions (32+ chars; auto-fallback in dev) |
 | `ADMIN_EMAIL` | Admin login email (default: `admin@store.com`) |
 | `ADMIN_PASSWORD` | Admin login password (default: `Admin123!`) |
 
-### 4. Initialize the database
-
 ```bash
 npm run db:init
-```
-
-This runs `scripts/schema.sql`, `scripts/seed.sql`, and creates the default admin user.
-
-### 5. Run the dev server
-
-```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
-
-Sign in at `/auth/sign-in` with the admin credentials above, then visit `/admin`.
-
 ## Deploy to Vercel
 
-### 1. Create Vercel Postgres
-
-1. Push your code to GitHub
-2. Import the repo in [Vercel](https://vercel.com)
-3. Go to **Storage** → **Create Database** → **Postgres** (or Neon via Marketplace)
-4. Connect the database to your project — Vercel auto-sets `POSTGRES_URL`
-
-### 2. Set environment variables
-
-In Vercel project settings, add:
+### Environment variables (production)
 
 | Variable | Value |
 |---|---|
@@ -112,60 +101,26 @@ In Vercel project settings, add:
 | `ADMIN_EMAIL` | Your admin email |
 | `ADMIN_PASSWORD` | Strong password for production |
 
-### 3. Initialize database after first deploy
-
-Run locally with production `POSTGRES_URL`, or use the Vercel Postgres SQL console:
+Initialize the database after first deploy:
 
 ```bash
 POSTGRES_URL="your-production-url" AUTH_SECRET="your-secret" npm run db:init
 ```
 
-Alternatively, run `scripts/schema.sql` and `scripts/seed.sql` in the SQL console, then create the admin user via the init script.
+## Routes
 
-### 4. Deploy
+| Route | Purpose |
+|---|---|
+| `/` | Warehouse dashboard |
+| `/inventory` | Stock list (SKU, quantity, zone, status) |
+| `/inventory/[slug]` | Item detail and movement history |
+| `/pick-list` | Reserved items for dispatch |
+| `/dispatch` | Record outgoing stock |
+| `/movements` | Stock in/out history |
+| `/admin` | Warehouse admin panel |
+| `/auth/sign-in` | Staff sign in |
 
-Vercel runs `npm run build` automatically on push.
-
-### Deploy checklist
-
-- [ ] Postgres storage linked to Vercel project
-- [ ] `POSTGRES_URL` set (auto from storage)
-- [ ] `AUTH_SECRET` set to a strong random value
-- [ ] `ADMIN_EMAIL` and `ADMIN_PASSWORD` set for production
-- [ ] Database initialized via `npm run db:init`
-- [ ] Admin login works at `/auth/sign-in`
-- [ ] Test checkout end-to-end (order created, stock decrements, cart clears)
-
-## Project Structure
-
-```
-src/
-├── app/                    # Next.js App Router pages
-│   ├── actions/            # Server actions (auth, cart, orders)
-│   ├── admin/              # Admin dashboard & product management
-│   ├── auth/               # Sign in, sign up
-│   ├── cart/               # Shopping cart
-│   ├── checkout/           # Checkout flow
-│   ├── orders/             # Order history
-│   └── products/           # Catalog & product detail
-├── components/             # Reusable UI components
-├── context/                # React context (cart)
-├── lib/                    # DB client, auth, data layer
-└── types/                  # TypeScript types
-scripts/
-├── schema.sql              # Database tables
-├── seed.sql                # Categories & products seed data
-└── init-db.mjs             # Full init (schema + seed + admin)
-```
-
-## Environment Variables
-
-| Variable | Required | Description |
-|---|---|---|
-| `POSTGRES_URL` | Yes (for auth/orders) | Vercel Postgres connection string |
-| `AUTH_SECRET` | Yes (for auth) | Secret for signing JWT session cookies |
-| `ADMIN_EMAIL` | No | Admin account email (default: `admin@store.com`) |
-| `ADMIN_PASSWORD` | No | Admin account password (default: `Admin123!`) |
+Legacy e-commerce routes (`/products`, `/cart`, `/checkout`, `/orders`) redirect automatically.
 
 ## Scripts
 

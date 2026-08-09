@@ -5,8 +5,8 @@ export function ProductGrid({ products }: { products: Product[] }) {
   if (products.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-lg text-zinc-600">No products found.</p>
-        <p className="mt-1 text-sm text-zinc-500">Try adjusting your search or filters.</p>
+        <p className="text-lg text-zinc-600">No inventory items found.</p>
+        <p className="mt-1 text-sm text-zinc-500">Try adjusting your search or zone filter.</p>
       </div>
     );
   }

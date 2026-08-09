@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useCart } from "@/context/cart-context";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, ShoppingBag, Check } from "lucide-react";
+import { Minus, Plus, ClipboardList, Check } from "lucide-react";
 import type { Product } from "@/types/database";
 
 export function AddToCartButton({ product }: { product: Product }) {
@@ -51,13 +51,13 @@ export function AddToCartButton({ product }: { product: Product }) {
       >
         {added ? (
           <>
-            <Check className="h-4 w-4" /> Added!
+            <Check className="h-4 w-4" /> Reserved!
           </>
         ) : outOfStock ? (
           "Out of Stock"
         ) : (
           <>
-            <ShoppingBag className="h-4 w-4" /> Add to Cart
+            <ClipboardList className="h-4 w-4" /> Add to Pick List
           </>
         )}
       </Button>

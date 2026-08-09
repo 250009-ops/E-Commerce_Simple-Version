@@ -12,8 +12,8 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Storefront — Modern E-Commerce",
-  description: "Curated products for modern living. Shop electronics, clothing, home goods, and more.",
+  title: "Warehouse Control Panel",
+  description: "Inventory management, pick lists, and stock dispatch for warehouse operations.",
 };
 
 export default function RootLayout({

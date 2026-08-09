@@ -16,9 +16,9 @@ export default function SignUpPage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 py-16">
-      <h1 className="text-3xl font-bold text-zinc-900">Create account</h1>
+      <h1 className="text-3xl font-bold text-zinc-900">Register staff account</h1>
       <p className="mt-2 text-sm text-zinc-600">
-        Already have an account?{" "}
+        Already have access?{" "}
         <Link href="/auth/sign-in" className="font-medium text-zinc-900 hover:underline">
           Sign in
         </Link>
@@ -57,7 +57,7 @@ export default function SignUpPage() {
         )}
 
         <Button type="submit" size="lg" className="w-full" disabled={pending}>
-          {pending ? "Creating account..." : "Create account"}
+          {pending ? "Creating account..." : "Create staff account"}
         </Button>
       </form>
     </div>

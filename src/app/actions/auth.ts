@@ -1,32 +1,46 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { sql, isDatabaseConfigured } from "@/lib/db";
+import { sql, isDemoMode } from "@/lib/db";
 import {
   createSession,
   deleteSession,
   getSession,
   hashPassword,
   verifyPassword,
+  DEMO_ADMIN_ID,
+  getDemoAdminEmails,
+  isDemoAdminCredentials,
 } from "@/lib/auth";
 import type { SessionUser } from "@/types/database";
 
 export async function getSessionUser(): Promise<SessionUser | null> {
-  if (!isDatabaseConfigured()) return null;
   return getSession();
 }
 
-export async function signIn(formData: FormData) {
-  if (!isDatabaseConfigured()) {
-    return {
-      error:
-        "Database is not configured. Set POSTGRES_URL and AUTH_SECRET in your environment.",
-    };
-  }
+export async function isDemoModeActive(): Promise<boolean> {
+  return isDemoMode();
+}
 
+export async function signIn(formData: FormData) {
   const email = (formData.get("email") as string).trim().toLowerCase();
   const password = formData.get("password") as string;
   const redirectTo = (formData.get("redirect") as string) || "/";
+
+  if (isDemoMode()) {
+    if (isDemoAdminCredentials(email, password)) {
+      await createSession({
+        id: DEMO_ADMIN_ID,
+        email,
+        fullName: "Warehouse Admin",
+        isAdmin: true,
+      });
+      redirect(redirectTo);
+    }
+    return {
+      error: `Invalid credentials. Demo mode: sign in with ${getDemoAdminEmails()[0]} / your configured admin password.`,
+    };
+  }
 
   const { rows } = await sql`
     SELECT id, email, password_hash, full_name, is_admin
@@ -49,10 +63,10 @@ export async function signIn(formData: FormData) {
 }
 
 export async function signUp(formData: FormData) {
-  if (!isDatabaseConfigured()) {
+  if (isDemoMode()) {
     return {
       error:
-        "Database is not configured. Set POSTGRES_URL and AUTH_SECRET in your environment.",
+        "Staff registration requires a database. Set POSTGRES_URL in .env.local, or sign in with demo admin credentials.",
     };
   }
 

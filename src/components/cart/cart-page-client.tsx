@@ -41,7 +41,7 @@ export function CartPageClient({
 
   if (guestItems === null) {
     return (
-      <div className="py-16 text-center text-zinc-600">Loading cart...</div>
+      <div className="py-16 text-center text-zinc-600">Loading pick list...</div>
     );
   }
 

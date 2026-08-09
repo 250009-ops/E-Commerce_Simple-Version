@@ -1,43 +1,25 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth";
-import { isDatabaseConfigured } from "@/lib/db";
+
+const PROTECTED_PATHS = ["/dispatch", "/movements", "/admin"];
 
 export async function updateSession(request: NextRequest) {
   const response = NextResponse.next({ request });
+  const pathname = request.nextUrl.pathname;
 
-  const protectedPaths = ["/checkout", "/orders", "/admin"];
-  const isProtected = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (!isDatabaseConfigured()) {
-    if (isProtected) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/sign-in";
-      url.searchParams.set(
-        "message",
-        "Database is not configured. Set POSTGRES_URL and AUTH_SECRET to use checkout, orders, and admin."
-      );
-      return NextResponse.redirect(url);
-    }
-    return response;
-  }
+  const isProtected = PROTECTED_PATHS.some((path) => pathname.startsWith(path));
+  if (!isProtected) return response;
 
   const user = await getSessionFromRequest(request);
 
-  if (
-    !user &&
-    (request.nextUrl.pathname.startsWith("/checkout") ||
-      request.nextUrl.pathname.startsWith("/orders") ||
-      request.nextUrl.pathname.startsWith("/admin"))
-  ) {
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/auth/sign-in";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 
-  if (request.nextUrl.pathname.startsWith("/admin") && user && !user.isAdmin) {
+  if (pathname.startsWith("/admin") && !user.isAdmin) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

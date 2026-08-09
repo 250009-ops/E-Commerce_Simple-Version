@@ -16,17 +16,17 @@ export async function createOrder(
     return {
       success: false,
       error:
-        "Database is not configured. Set POSTGRES_URL and AUTH_SECRET in your environment.",
+        "Dispatch requires a database. Set POSTGRES_URL in .env.local for production use.",
     };
   }
 
   const user = await getSession();
   if (!user) {
-    return { success: false, error: "You must be signed in to checkout." };
+    return { success: false, error: "You must be signed in to dispatch stock." };
   }
 
   if (items.length === 0) {
-    return { success: false, error: "Your cart is empty." };
+    return { success: false, error: "Your pick list is empty." };
   }
 
   let total = 0;
@@ -88,9 +88,10 @@ export async function createOrder(
   }
 
   await clearUserCart();
-  revalidatePath("/orders");
-  revalidatePath("/cart");
-  revalidatePath("/products");
+  revalidatePath("/inventory");
+  revalidatePath("/pick-list");
+  revalidatePath("/movements");
+  revalidatePath("/admin/products");
 
   return { success: true, orderId: order.id as string };
 }
@@ -171,7 +172,7 @@ export async function createProduct(formData: FormData) {
     return { error: message };
   }
 
-  revalidatePath("/products");
+  revalidatePath("/inventory");
   revalidatePath("/admin/products");
   redirect("/admin/products");
 }
@@ -185,7 +186,7 @@ export async function deleteProduct(productId: string) {
 
   await sql`DELETE FROM products WHERE id = ${productId}`;
 
-  revalidatePath("/products");
+  revalidatePath("/inventory");
   revalidatePath("/admin/products");
   return { success: true };
 }

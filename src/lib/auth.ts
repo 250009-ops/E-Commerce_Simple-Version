@@ -107,8 +107,26 @@ export async function getSessionFromRequest(
   };
 }
 
+export const DEMO_ADMIN_ID = "demo-admin";
+
 export function getDefaultAdminEmail(): string {
   return process.env.ADMIN_EMAIL ?? "admin@store.com";
+}
+
+export function getDemoAdminEmails(): string[] {
+  const primary = getDefaultAdminEmail().toLowerCase();
+  const aliases = ["admin@store.com", "admin@warehouse.com"];
+  return [...new Set([primary, ...aliases])];
+}
+
+export function isDemoAdminCredentials(
+  email: string,
+  password: string
+): boolean {
+  return (
+    getDemoAdminEmails().includes(email.trim().toLowerCase()) &&
+    password === getDefaultAdminPassword()
+  );
 }
 
 export function getDefaultAdminPassword(): string {

@@ -6,6 +6,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/context/cart-context";
 import { formatPrice } from "@/lib/format";
 import { Button } from "@/components/ui/button";
+import { extractSku } from "@/lib/data/demo-data";
 import type { CartLineItem } from "@/types/database";
 
 export function CartContent({ items }: { items: CartLineItem[] }) {
@@ -14,9 +15,9 @@ export function CartContent({ items }: { items: CartLineItem[] }) {
   if (items.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-lg text-zinc-600">Your cart is empty</p>
-        <Link href="/products" className="mt-4 inline-block">
-          <Button>Continue Shopping</Button>
+        <p className="text-lg text-zinc-600">Your pick list is empty</p>
+        <Link href="/inventory" className="mt-4 inline-block">
+          <Button>Browse inventory</Button>
         </Link>
       </div>
     );
@@ -26,8 +27,6 @@ export function CartContent({ items }: { items: CartLineItem[] }) {
     (sum, item) => sum + item.product.price * item.quantity,
     0
   );
-  const shipping = subtotal >= 100 ? 0 : 9.99;
-  const total = subtotal + shipping;
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">
@@ -49,14 +48,15 @@ export function CartContent({ items }: { items: CartLineItem[] }) {
               )}
             </div>
             <div className="flex flex-1 flex-col">
+              <p className="font-mono text-xs text-zinc-500">{extractSku(item.product.name)}</p>
               <Link
-                href={`/products/${item.product.slug}`}
+                href={`/inventory/${item.product.slug}`}
                 className="font-medium text-zinc-900 hover:underline"
               >
-                {item.product.name}
+                {item.product.name.replace(/^SKU-[A-Z0-9-]+ — /, "")}
               </Link>
               <p className="mt-1 text-sm text-zinc-600">
-                {formatPrice(item.product.price)}
+                {formatPrice(item.product.price)}/unit
               </p>
               <div className="mt-auto flex items-center justify-between pt-2">
                 <div className="flex items-center rounded-lg border border-zinc-300">
@@ -97,31 +97,20 @@ export function CartContent({ items }: { items: CartLineItem[] }) {
       </div>
 
       <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-6 h-fit">
-        <h2 className="text-lg font-semibold text-zinc-900">Order Summary</h2>
+        <h2 className="text-lg font-semibold text-zinc-900">Pick list summary</h2>
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex justify-between">
-            <dt className="text-zinc-600">Subtotal</dt>
-            <dd className="font-medium">{formatPrice(subtotal)}</dd>
+            <dt className="text-zinc-600">Items reserved</dt>
+            <dd className="font-medium">{items.reduce((s, i) => s + i.quantity, 0)}</dd>
           </div>
-          <div className="flex justify-between">
-            <dt className="text-zinc-600">Shipping</dt>
-            <dd className="font-medium">
-              {shipping === 0 ? "Free" : formatPrice(shipping)}
-            </dd>
-          </div>
-          {subtotal < 100 && (
-            <p className="text-xs text-zinc-500">
-              Add {formatPrice(100 - subtotal)} more for free shipping
-            </p>
-          )}
           <div className="flex justify-between border-t border-zinc-200 pt-2 text-base">
-            <dt className="font-semibold">Total</dt>
-            <dd className="font-semibold">{formatPrice(total)}</dd>
+            <dt className="font-semibold">Total value</dt>
+            <dd className="font-semibold">{formatPrice(subtotal)}</dd>
           </div>
         </dl>
-        <Link href="/checkout" className="mt-6 block">
+        <Link href="/dispatch" className="mt-6 block">
           <Button size="lg" className="w-full">
-            Proceed to Checkout
+            Proceed to Dispatch
           </Button>
         </Link>
       </div>
