@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { sql, isDatabaseConfigured } from "@/lib/db";
+import { getSession } from "@/lib/auth";
 import { getProductById } from "@/lib/data/products";
 import { clearUserCart } from "@/app/actions/cart";
 import type { ShippingAddress } from "@/types/database";
@@ -12,15 +12,15 @@ export async function createOrder(
   items: { productId: string; quantity: number }[],
   shippingAddress: ShippingAddress
 ): Promise<{ success: boolean; orderId?: string; error?: string }> {
-  if (!isSupabaseConfigured()) {
-    return { success: false, error: "Supabase is not configured. Please set up your environment variables." };
+  if (!isDatabaseConfigured()) {
+    return {
+      success: false,
+      error:
+        "Database is not configured. Set POSTGRES_URL and AUTH_SECRET in your environment.",
+    };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getSession();
   if (!user) {
     return { success: false, error: "You must be signed in to checkout." };
   }
@@ -54,39 +54,36 @@ export async function createOrder(
     });
   }
 
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      user_id: user.id,
-      status: "pending",
-      total,
-      shipping_address: shippingAddress,
-    })
-    .select("id")
-    .single();
+  const orderResult = await sql`
+    INSERT INTO orders (user_id, status, total, shipping_address)
+    VALUES (${user.id}, 'pending', ${total}, ${JSON.stringify(shippingAddress)})
+    RETURNING id
+  `;
 
-  if (orderError || !order) {
-    return { success: false, error: orderError?.message ?? "Failed to create order" };
-  }
-
-  const { error: itemsError } = await supabase.from("order_items").insert(
-    orderItems.map((item) => ({
-      order_id: order.id,
-      ...item,
-    }))
-  );
-
-  if (itemsError) {
-    return { success: false, error: itemsError.message };
+  const order = orderResult.rows[0];
+  if (!order) {
+    return { success: false, error: "Failed to create order" };
   }
 
   for (const item of orderItems) {
-    const { error: stockError } = await supabase.rpc("decrement_product_stock", {
-      p_product_id: item.product_id,
-      p_quantity: item.quantity,
-    });
-    if (stockError) {
-      return { success: false, error: stockError.message };
+    await sql`
+      INSERT INTO order_items (order_id, product_id, quantity, price, product_name)
+      VALUES (${order.id as string}, ${item.product_id}, ${item.quantity}, ${item.price}, ${item.product_name})
+    `;
+  }
+
+  for (const item of orderItems) {
+    const stockResult = await sql`
+      UPDATE products
+      SET stock = stock - ${item.quantity}
+      WHERE id = ${item.product_id} AND stock >= ${item.quantity}
+      RETURNING id
+    `;
+    if (stockResult.rows.length === 0) {
+      return {
+        success: false,
+        error: `Insufficient stock for ${item.product_name}`,
+      };
     }
   }
 
@@ -95,99 +92,62 @@ export async function createOrder(
   revalidatePath("/cart");
   revalidatePath("/products");
 
-  return { success: true, orderId: order.id };
+  return { success: true, orderId: order.id as string };
 }
 
-export async function getUserOrders() {
-  if (!isSupabaseConfigured()) return [];
+import type { Order, OrderItem } from "@/types/database";
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+export async function getUserOrders(): Promise<
+  (Order & { order_items: OrderItem[] })[]
+> {
+  if (!isDatabaseConfigured()) return [];
+
+  const user = await getSession();
   if (!user) return [];
 
-  const { data } = await supabase
-    .from("orders")
-    .select("*, order_items(*)")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const { rows: orders } = await sql`
+    SELECT * FROM orders
+    WHERE user_id = ${user.id}
+    ORDER BY created_at DESC
+  `;
 
-  return data ?? [];
-}
+  if (orders.length === 0) return [];
 
-async function getSiteUrl() {
-  const headersList = await headers();
-  const host = headersList.get("x-forwarded-host") ?? headersList.get("host");
-  const protocol = headersList.get("x-forwarded-proto") ?? "http";
-  if (host) return `${protocol}://${host}`;
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-}
+  const result: (Order & { order_items: OrderItem[] })[] = [];
 
-export async function signIn(formData: FormData) {
-  if (!isSupabaseConfigured()) {
-    return { error: "Supabase is not configured. Please set up your environment variables." };
+  for (const order of orders) {
+    const { rows: items } = await sql`
+      SELECT * FROM order_items WHERE order_id = ${order.id as string}
+    `;
+    result.push({
+      id: order.id as string,
+      user_id: order.user_id as string,
+      status: order.status as Order["status"],
+      total: Number(order.total),
+      shipping_address: order.shipping_address as Order["shipping_address"],
+      created_at: String(order.created_at),
+      order_items: items.map((item) => ({
+        id: item.id as string,
+        order_id: item.order_id as string,
+        product_id: item.product_id as string | null,
+        quantity: Number(item.quantity),
+        price: Number(item.price),
+        product_name: item.product_name as string,
+      })),
+    });
   }
 
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const redirectTo = (formData.get("redirect") as string) || "/";
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  redirect(redirectTo);
-}
-
-export async function signUp(formData: FormData) {
-  if (!isSupabaseConfigured()) {
-    return { error: "Supabase is not configured. Please set up your environment variables." };
-  }
-
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const fullName = formData.get("fullName") as string;
-  const siteUrl = await getSiteUrl();
-
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: fullName },
-      emailRedirectTo: `${siteUrl}/auth/callback`,
-    },
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  redirect("/auth/sign-in?message=Check your email to confirm your account");
+  return result;
 }
 
 export async function createProduct(formData: FormData) {
-  if (!isSupabaseConfigured()) {
-    return { error: "Supabase is not configured" };
+  if (!isDatabaseConfigured()) {
+    return { error: "Database is not configured" };
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.is_admin) return { error: "Admin access required" };
+  if (!user.isAdmin) return { error: "Admin access required" };
 
   const name = formData.get("name") as string;
   const slug = formData.get("slug") as string;
@@ -198,18 +158,18 @@ export async function createProduct(formData: FormData) {
   const stock = parseInt(formData.get("stock") as string, 10);
   const featured = formData.get("featured") === "on";
 
-  const { error } = await supabase.from("products").insert({
-    name,
-    slug,
-    description,
-    price,
-    image_url: imageUrl || null,
-    category_id: categoryId || null,
-    stock,
-    featured,
-  });
-
-  if (error) return { error: error.message };
+  try {
+    await sql`
+      INSERT INTO products (name, slug, description, price, image_url, category_id, stock, featured)
+      VALUES (
+        ${name}, ${slug}, ${description}, ${price},
+        ${imageUrl || null}, ${categoryId || null}, ${stock}, ${featured}
+      )
+    `;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to create product";
+    return { error: message };
+  }
 
   revalidatePath("/products");
   revalidatePath("/admin/products");
@@ -217,24 +177,13 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function deleteProduct(productId: string) {
-  if (!isSupabaseConfigured()) return { error: "Not configured" };
+  if (!isDatabaseConfigured()) return { error: "Not configured" };
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSession();
   if (!user) return { error: "Unauthorized" };
+  if (!user.isAdmin) return { error: "Admin access required" };
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile?.is_admin) return { error: "Admin access required" };
-
-  const { error } = await supabase.from("products").delete().eq("id", productId);
-  if (error) return { error: error.message };
+  await sql`DELETE FROM products WHERE id = ${productId}`;
 
   revalidatePath("/products");
   revalidatePath("/admin/products");

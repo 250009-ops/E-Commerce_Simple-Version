@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useActionState } from "react";
-import { signIn } from "@/app/actions/orders";
+import { signIn } from "@/app/actions/auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 

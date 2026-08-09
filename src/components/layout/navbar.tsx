@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ShoppingBag, Search, User, Menu, X, Package } from "lucide-react";
 import { useEffect, useState } from "react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { getSessionUser, signOut } from "@/app/actions/auth";
 import { useCart } from "@/context/cart-context";
 import { cn } from "@/lib/utils";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
+import type { SessionUser } from "@/types/database";
 
 const navLinks = [
   { href: "/products", label: "Shop" },
@@ -20,37 +20,14 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const { count } = useCart();
-  const [user, setUser] = useState<SupabaseUser | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) return;
-
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user) {
-        supabase
-          .from("profiles")
-          .select("is_admin")
-          .eq("id", user.id)
-          .single()
-          .then(({ data }) => setIsAdmin(data?.is_admin ?? false));
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) setIsAdmin(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+    getSessionUser().then(setUser);
+  }, [pathname]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,8 +39,8 @@ export function Navbar() {
   };
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    await signOut();
+    setUser(null);
     router.push("/");
     router.refresh();
   };
@@ -122,7 +99,7 @@ export function Navbar() {
               >
                 <Package className="h-5 w-5" />
               </Link>
-              {isAdmin && (
+              {user.isAdmin && (
                 <Link
                   href="/admin"
                   className="text-sm font-medium text-zinc-600 hover:text-zinc-900"
@@ -196,7 +173,7 @@ export function Navbar() {
                 <Link href="/orders" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-zinc-700">
                   My Orders
                 </Link>
-                {isAdmin && (
+                {user.isAdmin && (
                   <Link href="/admin" onClick={() => setMobileOpen(false)} className="text-sm font-medium text-zinc-700">
                     Admin
                   </Link>

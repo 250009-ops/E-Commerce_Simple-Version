@@ -20,11 +20,19 @@ export type Product = {
   categories?: Category | null;
 };
 
-export type Profile = {
+export type User = {
   id: string;
+  email: string;
   full_name: string | null;
   is_admin: boolean;
   created_at: string;
+};
+
+export type SessionUser = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  isAdmin: boolean;
 };
 
 export type CartItem = {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Package, Plus, Settings } from "lucide-react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import { sql, isDatabaseConfigured } from "@/lib/db";
 import { getProducts } from "@/lib/data/products";
 
 export const metadata = {
@@ -11,12 +11,9 @@ export default async function AdminPage() {
   const products = await getProducts();
   let orderCount = 0;
 
-  if (isSupabaseConfigured()) {
-    const supabase = await createClient();
-    const { count } = await supabase
-      .from("orders")
-      .select("*", { count: "exact", head: true });
-    orderCount = count ?? 0;
+  if (isDatabaseConfigured()) {
+    const { rows } = await sql`SELECT COUNT(*)::int AS count FROM orders`;
+    orderCount = Number(rows[0]?.count ?? 0);
   }
 
   return (

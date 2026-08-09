@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { signUp } from "@/app/actions/orders";
+import { signUp } from "@/app/actions/auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 

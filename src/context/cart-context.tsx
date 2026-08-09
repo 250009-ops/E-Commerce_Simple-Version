@@ -8,7 +8,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import {
+  addCartItem,
+  getCartCount,
+  isUserLoggedIn,
+  removeCartItem,
+  updateCartItem,
+} from "@/app/actions/cart";
 import {
   addToGuestCart,
   getGuestCart,
@@ -31,22 +37,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [count, setCount] = useState(0);
 
   const refresh = useCallback(async () => {
-    if (!isSupabaseConfigured()) {
-      setCount(getGuestCartCount());
-      return;
-    }
-
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (user) {
-      const { data } = await supabase
-        .from("cart_items")
-        .select("quantity")
-        .eq("user_id", user.id);
-      setCount(data?.reduce((sum, i) => sum + i.quantity, 0) ?? 0);
+    const loggedIn = await isUserLoggedIn();
+    if (loggedIn) {
+      setCount(await getCartCount());
     } else {
       setCount(getGuestCartCount());
     }
@@ -56,30 +49,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     let active = true;
 
     async function loadCount() {
-      if (!isSupabaseConfigured()) {
-        if (active) setCount(getGuestCartCount());
-        return;
-      }
+      const loggedIn = await isUserLoggedIn();
+      if (!active) return;
 
-      try {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
-        if (!active) return;
-
-        if (user) {
-          const { data } = await supabase
-            .from("cart_items")
-            .select("quantity")
-            .eq("user_id", user.id);
-          setCount(data?.reduce((sum, i) => sum + i.quantity, 0) ?? 0);
-        } else {
-          setCount(getGuestCartCount());
-        }
-      } catch {
-        if (active) setCount(getGuestCartCount());
+      if (loggedIn) {
+        setCount(await getCartCount());
+      } else {
+        setCount(getGuestCartCount());
       }
     }
 
@@ -91,37 +67,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback(
     async (productId: string, quantity = 1) => {
-      if (!isSupabaseConfigured()) {
-        addToGuestCart(productId, quantity);
-        await refresh();
-        return;
-      }
-
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        const { data: existing } = await supabase
-          .from("cart_items")
-          .select("id, quantity")
-          .eq("user_id", user.id)
-          .eq("product_id", productId)
-          .single();
-
-        if (existing) {
-          await supabase
-            .from("cart_items")
-            .update({ quantity: existing.quantity + quantity })
-            .eq("id", existing.id);
-        } else {
-          await supabase.from("cart_items").insert({
-            user_id: user.id,
-            product_id: productId,
-            quantity,
-          });
-        }
+      const loggedIn = await isUserLoggedIn();
+      if (loggedIn) {
+        await addCartItem(productId, quantity);
       } else {
         addToGuestCart(productId, quantity);
       }
@@ -132,31 +80,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const updateItem = useCallback(
     async (productId: string, quantity: number) => {
-      if (!isSupabaseConfigured()) {
-        updateGuestCartItem(productId, quantity);
-        await refresh();
-        return;
-      }
-
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        if (quantity <= 0) {
-          await supabase
-            .from("cart_items")
-            .delete()
-            .eq("user_id", user.id)
-            .eq("product_id", productId);
-        } else {
-          await supabase
-            .from("cart_items")
-            .update({ quantity })
-            .eq("user_id", user.id)
-            .eq("product_id", productId);
-        }
+      const loggedIn = await isUserLoggedIn();
+      if (loggedIn) {
+        await updateCartItem(productId, quantity);
       } else {
         updateGuestCartItem(productId, quantity);
       }
@@ -167,23 +93,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const removeItem = useCallback(
     async (productId: string) => {
-      if (!isSupabaseConfigured()) {
-        removeFromGuestCart(productId);
-        await refresh();
-        return;
-      }
-
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        await supabase
-          .from("cart_items")
-          .delete()
-          .eq("user_id", user.id)
-          .eq("product_id", productId);
+      const loggedIn = await isUserLoggedIn();
+      if (loggedIn) {
+        await removeCartItem(productId);
       } else {
         removeFromGuestCart(productId);
       }
