@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { ProductImage } from "@/components/ui/product-image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "@/context/cart-context";
@@ -38,7 +38,7 @@ export function CartContent({ items }: { items: CartLineItem[] }) {
           >
             <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-zinc-100">
               {item.product.image_url && (
-                <Image
+                <ProductImage
                   src={item.product.image_url}
                   alt={item.product.name}
                   fill

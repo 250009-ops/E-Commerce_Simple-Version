@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { ProductImage } from "@/components/ui/product-image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -46,7 +46,7 @@ export default async function InventoryDetailPage({
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
         <div className="relative aspect-square overflow-hidden rounded-2xl bg-zinc-100">
           {product.image_url ? (
-            <Image
+            <ProductImage
               src={product.image_url}
               alt={product.name}
               fill

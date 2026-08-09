@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import { ProductImage } from "@/components/ui/product-image";
 import { formatPrice } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,7 +19,7 @@ export function ProductCard({ product }: { product: Product }) {
     >
       <div className="relative aspect-square overflow-hidden bg-zinc-100">
         {product.image_url ? (
-          <Image
+          <ProductImage
             src={product.image_url}
             alt={product.name}
             fill

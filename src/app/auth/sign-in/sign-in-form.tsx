@@ -11,12 +11,14 @@ type SignInFormProps = {
   demoMode: boolean;
   demoEmail: string;
   demoPassword: string;
+  authSetupMessage?: string | null;
 };
 
 export function SignInForm({
   demoMode,
   demoEmail,
   demoPassword,
+  authSetupMessage,
 }: SignInFormProps) {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") ?? "/";
@@ -39,6 +41,13 @@ export function SignInForm({
           Register staff access
         </Link>
       </p>
+
+      {authSetupMessage && (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-medium">Configuration required</p>
+          <p className="mt-1">{authSetupMessage}</p>
+        </div>
+      )}
 
       {demoMode && (
         <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
@@ -88,7 +97,12 @@ export function SignInForm({
           </p>
         )}
 
-        <Button type="submit" size="lg" className="w-full" disabled={pending}>
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={pending || Boolean(authSetupMessage)}
+        >
           {pending ? "Signing in..." : "Sign in"}
         </Button>
       </form>

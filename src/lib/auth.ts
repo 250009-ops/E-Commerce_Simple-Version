@@ -2,10 +2,13 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import type { NextRequest } from "next/server";
+import { isDemoMode } from "@/lib/db";
 import type { SessionUser } from "@/types/database";
 
 const SESSION_COOKIE = "session";
 const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
+const DEV_FALLBACK_SECRET = "dev-secret-change-in-production";
+const DEMO_FALLBACK_SECRET = "demo-auth-secret-warehouse-cp";
 
 type SessionPayload = {
   userId: string;
@@ -13,15 +16,31 @@ type SessionPayload = {
   isAdmin: boolean;
 };
 
+export function isAuthConfigured(): boolean {
+  return Boolean(process.env.AUTH_SECRET?.trim());
+}
+
+export function getAuthSetupMessage(): string | null {
+  if (isAuthConfigured()) return null;
+  if (process.env.NODE_ENV !== "production" || isDemoMode()) return null;
+  return "AUTH_SECRET is required for sign-in in production. Add it in your Vercel project settings under Environment Variables.";
+}
+
 function getAuthSecret(): Uint8Array {
-  const secret =
-    process.env.AUTH_SECRET ??
-    (process.env.NODE_ENV === "production"
-      ? (() => {
-          throw new Error("AUTH_SECRET is required in production");
-        })()
-      : "dev-secret-change-in-production");
-  return new TextEncoder().encode(secret);
+  const configured = process.env.AUTH_SECRET?.trim();
+  if (configured) {
+    return new TextEncoder().encode(configured);
+  }
+
+  if (process.env.NODE_ENV !== "production" || isDemoMode()) {
+    return new TextEncoder().encode(
+      isDemoMode() ? DEMO_FALLBACK_SECRET : DEV_FALLBACK_SECRET
+    );
+  }
+
+  // Production with a database but no AUTH_SECRET: allow page render and token
+  // verification without throwing; block new sessions in createSession.
+  return new TextEncoder().encode(DEMO_FALLBACK_SECRET);
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -35,7 +54,14 @@ export async function verifyPassword(
   return bcrypt.compare(password, hash);
 }
 
-export async function createSession(user: SessionUser): Promise<void> {
+export async function createSession(
+  user: SessionUser
+): Promise<{ error: string } | void> {
+  const setupMessage = getAuthSetupMessage();
+  if (setupMessage) {
+    return { error: setupMessage };
+  }
+
   const token = await new SignJWT({
     userId: user.id,
     email: user.email,

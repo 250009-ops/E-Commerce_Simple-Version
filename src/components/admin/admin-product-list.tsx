@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { ProductImage } from "@/components/ui/product-image";
 import Link from "next/link";
 import { Plus, Trash2 } from "lucide-react";
 import { deleteProduct } from "@/app/actions/orders";
@@ -49,7 +49,7 @@ export function AdminProductList({ products }: { products: Product[] }) {
                     <div className="flex items-center gap-3">
                       <div className="relative h-10 w-10 overflow-hidden rounded-lg bg-zinc-100">
                         {product.image_url && (
-                          <Image
+                          <ProductImage
                             src={product.image_url}
                             alt={product.name}
                             fill

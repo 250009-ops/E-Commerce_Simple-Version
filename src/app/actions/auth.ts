@@ -15,7 +15,11 @@ import {
 import type { SessionUser } from "@/types/database";
 
 export async function getSessionUser(): Promise<SessionUser | null> {
-  return getSession();
+  try {
+    return await getSession();
+  } catch {
+    return null;
+  }
 }
 
 export async function isDemoModeActive(): Promise<boolean> {
@@ -29,12 +33,13 @@ export async function signIn(formData: FormData) {
 
   if (isDemoMode()) {
     if (isDemoAdminCredentials(email, password)) {
-      await createSession({
+      const sessionError = await createSession({
         id: DEMO_ADMIN_ID,
         email,
         fullName: "Warehouse Admin",
         isAdmin: true,
       });
+      if (sessionError?.error) return sessionError;
       redirect(redirectTo);
     }
     return {
@@ -52,12 +57,13 @@ export async function signIn(formData: FormData) {
     return { error: "Invalid email or password" };
   }
 
-  await createSession({
+  const sessionError = await createSession({
     id: user.id as string,
     email: user.email as string,
     fullName: user.full_name as string | null,
     isAdmin: Boolean(user.is_admin),
   });
+  if (sessionError?.error) return sessionError;
 
   redirect(redirectTo);
 }
@@ -91,12 +97,13 @@ export async function signUp(formData: FormData) {
   `;
 
   const user = rows[0];
-  await createSession({
+  const sessionError = await createSession({
     id: user.id as string,
     email: user.email as string,
     fullName: user.full_name as string | null,
     isAdmin: Boolean(user.is_admin),
   });
+  if (sessionError?.error) return sessionError;
 
   redirect("/");
 }
